@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Colorful Weather App</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+    transition: background 1s ease;
+    color: #fff;
+  }
+
+  .container {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 30px 40px;
+    border-radius: 15px;
+    max-width: 350px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+
+  h1 {
+    margin-bottom: 20px;
+  }
+
+  form {
+    margin-bottom: 25px;
+  }
+
+  input[type="text"] {
+    padding: 12px 15px;
+    border-radius: 30px;
+    border: none;
+    width: 70%;
+    font-size: 16px;
+    outline: none;
+    transition: 0.3s ease;
+  }
+
+  input[type="text"]:focus {
+    box-shadow: 0 0 10px #fff;
+  }
+
+  button {
+    padding: 12px 20px;
+    border-radius: 30px;
+    border: none;
+    background-color: #ff7e5f;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-left: 10px;
+  }
+
+  button:hover {
+    background-color: #feb47b;
+  }
+
+  .weather-info {
+    margin-top: 15px;
+  }
+
+  .weather-info img {
+    width: 100px;
+    margin: 10px 0;
+  }
+
+  .temp {
+    font-size: 48px;
+    font-weight: 700;
+  }
+
+  .description {
+    font-size: 20px;
+    text-transform: capitalize;
+  }
+
+  .error {
+    margin-top: 20px;
+    background: #ff4c4c;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Weather App 🌤️</h1>
+    <form id="weatherForm">
+      <input type="text" id="cityInput" placeholder="Enter city name" required />
+      <button type="submit">Get Weather</button>
+    </form>
+    <div id="weatherResult" class="weather-info"></div>
+    <div id="error" class="error" style="display:none;"></div>
+  </div>
+
+<script>
+  const apiKey = "055b894b621dd1b39baf08568f6e58c3";
+
+  const weatherForm = document.getElementById('weatherForm');
+  const cityInput = document.getElementById('cityInput');
+  const weatherResult = document.getElementById('weatherResult');
+  const errorDiv = document.getElementById('error');
+  const body = document.body;
+
+  weatherForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const city = cityInput.value.trim();
+    if (city) {
+      fetchWeather(city);
+    }
+  });
+
+  function fetchWeather(city) {
+    errorDiv.style.display = 'none';
+    weatherResult.innerHTML = 'Loading...';
+
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`)
+      .then(res => {
+        if (!res.ok) throw new Error('City not found');
+        return res.json();
+      })
+      .then(data => {
+        displayWeather(data);
+      })
+      .catch(err => {
+        weatherResult.innerHTML = '';
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = err.message;
+        body.style.background = 'linear-gradient(135deg, #ff4e50, #f9d423)'; // error background
+      });
+  }
+
+  function displayWeather(data) {
+    const { main, weather, name } = data;
+    const temp = Math.round(main.temp);
+    const description = weather[0].description;
+    const icon = weather[0].icon;
+
+    // Set background based on weather main condition
+    switch (weather[0].main.toLowerCase()) {
+      case 'clear':
+        body.style.background = 'linear-gradient(135deg, #f6d365, #fda085)';
+        break;
+      case 'clouds':
+        body.style.background = 'linear-gradient(135deg, #bdc3c7, #2c3e50)';
+        break;
+      case 'rain':
+      case 'drizzle':
+        body.style.background = 'linear-gradient(135deg, #667db6, #0082c8)';
+        break;
+      case 'thunderstorm':
+        body.style.background = 'linear-gradient(135deg, #141e30, #243b55)';
+        break;
+      case 'snow':
+        body.style.background = 'linear-gradient(135deg, #e0eafc, #cfdef3)';
+        break;
+      default:
+        body.style.background = 'linear-gradient(135deg, #74ebd5, #ACB6E5)';
+    }
+
+    weatherResult.innerHTML = `
+      <h2>${name}</h2>
+      <img src="https://openweathermap.org/img/wn/${icon}@4x.png" alt="${description}" />
+      <div class="temp">${temp}°C</div>
+      <div class="description">${description}</div>
+    `;
+  }
+</script>
+</body>
+</html>
