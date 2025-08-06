@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Colorful Weather App</title>
+<title>Responsive Weather App</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
 
@@ -22,30 +22,35 @@
     background: linear-gradient(135deg, #74ebd5, #ACB6E5);
     transition: background 1s ease;
     color: #fff;
+    padding: 20px;
   }
 
   .container {
     background: rgba(0, 0, 0, 0.4);
     padding: 30px 40px;
     border-radius: 15px;
-    max-width: 350px;
+    max-width: 400px;
+    width: 100%;
     text-align: center;
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
   }
 
   h1 {
     margin-bottom: 20px;
+    font-size: 2rem;
   }
 
   form {
     margin-bottom: 25px;
+    display: flex;
+    gap: 10px;
   }
 
   input[type="text"] {
     padding: 12px 15px;
     border-radius: 30px;
     border: none;
-    width: 70%;
+    flex-grow: 1;
     font-size: 16px;
     outline: none;
     transition: 0.3s ease;
@@ -64,11 +69,16 @@
     font-weight: 700;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    margin-left: 10px;
+    min-width: 100px;
   }
 
-  button:hover {
+  button:hover:not(:disabled) {
     background-color: #feb47b;
+  }
+
+  button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
   }
 
   .weather-info {
@@ -88,6 +98,18 @@
   .description {
     font-size: 20px;
     text-transform: capitalize;
+    margin-bottom: 10px;
+  }
+
+  .extra-info {
+    font-size: 14px;
+    margin: 5px 0;
+  }
+
+  .last-updated {
+    margin-top: 15px;
+    font-size: 12px;
+    font-style: italic;
   }
 
   .error {
@@ -97,17 +119,69 @@
     border-radius: 10px;
     font-weight: 600;
   }
+
+  /* Loading spinner */
+  .loader {
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top: 5px solid #fff;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    margin: 30px auto 0;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    .container {
+      padding: 20px 25px;
+      max-width: 100%;
+    }
+
+    .temp {
+      font-size: 36px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    input[type="text"], button {
+      font-size: 14px;
+      padding: 10px 12px;
+    }
+
+    button {
+      min-width: 80px;
+    }
+
+    .weather-info img {
+      width: 80px;
+    }
+  }
 </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" role="main">
     <h1>Weather App 🌤️</h1>
-    <form id="weatherForm">
-      <input type="text" id="cityInput" placeholder="Enter city name" required />
-      <button type="submit">Get Weather</button>
+    <form id="weatherForm" aria-label="Weather search form">
+      <input 
+        type="text" 
+        id="cityInput" 
+        placeholder="Enter city name" 
+        required 
+        aria-required="true"
+        aria-label="City name input"
+      />
+      <button type="submit" id="searchBtn" aria-label="Get weather">Get Weather</button>
     </form>
-    <div id="weatherResult" class="weather-info"></div>
-    <div id="error" class="error" style="display:none;"></div>
+    <div id="weatherResult" class="weather-info" aria-live="polite" aria-atomic="true"></div>
+    <div id="error" class="error" role="alert" style="display:none;"></div>
   </div>
 
 <script>
@@ -118,6 +192,7 @@
   const weatherResult = document.getElementById('weatherResult');
   const errorDiv = document.getElementById('error');
   const body = document.body;
+  const searchBtn = document.getElementById('searchBtn');
 
   weatherForm.addEventListener('submit', e => {
     e.preventDefault();
@@ -129,29 +204,39 @@
 
   function fetchWeather(city) {
     errorDiv.style.display = 'none';
-    weatherResult.innerHTML = 'Loading...';
+    weatherResult.innerHTML = '<div class="loader" aria-label="Loading"></div>';
+    searchBtn.disabled = true;
 
     fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`)
       .then(res => {
-        if (!res.ok) throw new Error('City not found');
+        if (!res.ok) throw new Error('City not found. Please check your spelling.');
         return res.json();
       })
       .then(data => {
         displayWeather(data);
+        cityInput.value = '';
+        searchBtn.disabled = false;
       })
       .catch(err => {
         weatherResult.innerHTML = '';
         errorDiv.style.display = 'block';
         errorDiv.textContent = err.message;
         body.style.background = 'linear-gradient(135deg, #ff4e50, #f9d423)'; // error background
+        searchBtn.disabled = false;
       });
   }
 
   function displayWeather(data) {
-    const { main, weather, name } = data;
+    const { main, weather, wind, name, dt } = data;
     const temp = Math.round(main.temp);
+    const feelsLike = Math.round(main.feels_like);
+    const humidity = main.humidity;
+    const windSpeed = wind.speed;
     const description = weather[0].description;
     const icon = weather[0].icon;
+
+    // Format last updated time
+    const lastUpdated = new Date(dt * 1000).toLocaleString();
 
     // Set background based on weather main condition
     switch (weather[0].main.toLowerCase()) {
@@ -180,6 +265,10 @@
       <img src="https://openweathermap.org/img/wn/${icon}@4x.png" alt="${description}" />
       <div class="temp">${temp}°C</div>
       <div class="description">${description}</div>
+      <div class="extra-info">Feels like: ${feelsLike}°C</div>
+      <div class="extra-info">Humidity: ${humidity}%</div>
+      <div class="extra-info">Wind speed: ${windSpeed} m/s</div>
+      <div class="last-updated">Last updated: ${lastUpdated}</div>
     `;
   }
 </script>
